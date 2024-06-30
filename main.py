@@ -9,28 +9,6 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-options = webdriver.ChromeOptions()
-# options.add_argument('--headless')  # Run in headless mode
-# options.add_argument('--disable-gpu')  # Disable GPU acceleration
-# options.add_argument('--no-sandbox')  # Bypass OS security model (required for some systems)
-# options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
-
-driver = webdriver.Chrome(options=options)
-
-# Open a preliminary page
-driver.get("https://x.com")
-
-# Add the cookie for authentication
-cookie = {'name': 'auth_token', 'value': AUTH_TOKEN, 'domain': 'x.com'}
-driver.add_cookie(cookie)
-
-URL = URL
-# Navigate to the desired URL
-driver.get(URL)
-tweet_id = URL.split('/')[3]
-# Wait for the initial set of images to load (if necessary)
-wait = WebDriverWait(driver, 10)
-wait.until(EC.presence_of_all_elements_located((By.TAG_NAME, 'img')))
 
 # Function to smoothly scroll the page and collect image URLs
 def smooth_scroll_and_collect_images(driver):
@@ -73,12 +51,13 @@ def smooth_scroll_and_collect_images(driver):
                             for a in a_tags:
                                 href = a.get_attribute('href')
                                 try:
-                                    if a and href and href.split('/')[4] == 'status' and href.split('/')[-1] != 'analytics' and href not in seen_urls:
+                                    if a and href and href.split('/')[4] == 'status' and href.split('/')[
+                                        -1] != 'analytics' and href not in seen_urls:
                                         video_article_urls.append(href)
                                         seen_urls.add(href)
                                 except IndexError:
                                     print("error with index")
-                break # Exit retry loop if successful
+                break  # Exit retry loop if successful
             except StaleElementReferenceException:
                 retries -= 1
                 time.sleep(SCROLL_PAUSE_TIME)
@@ -95,7 +74,7 @@ def smooth_scroll_and_collect_images(driver):
             break
         if previous_scroll == current_scroll_position:
             print("probable end of webpage")
-            time.sleep(SCROLL_PAUSE_TIME * 5)
+            time.sleep(SCROLL_PAUSE_TIME * 20)
             scroll_position = driver.execute_script("return document.body.scrollHeight")
             if scroll_position >= current_scroll_position:
                 break
@@ -106,23 +85,6 @@ def smooth_scroll_and_collect_images(driver):
 
     return image_urls, video_article_urls
 
-# Smoothly scroll the page and collect all image URLs
-all_image_urls, video_article_urls = smooth_scroll_and_collect_images(driver)
-
-print("the browser has stopped")
-# Wait for additional images to load
-time.sleep(3)
-
-# Close the browser
-driver.quit()
-print("the browser exit")
-
-# Create the directory for downloading images
-project_directory = os.path.dirname(os.path.abspath(__file__))
-images_directory = os.path.join(project_directory, fr'downloaded_images\{tweet_id}')
-
-if not os.path.exists(images_directory):
-    os.makedirs(images_directory)
 
 # Function to extract the filename from a URL or data URL
 def extract_filename(url):
@@ -131,31 +93,84 @@ def extract_filename(url):
         return f"blob_{int(time.time())}.mp4"
     return os.path.basename(parsed_url.path)
 
-# Download each image
-for index, img_url in enumerate(all_image_urls):
-    try:
-        response = requests.get(img_url, stream=True)
-        if response.status_code == 200:
-            response.raw.decode_content = True
-            filename = extract_filename(img_url)
-            image_path = None
-            if filename.endswith("mp4"):
-                image_path = os.path.join(images_directory, f'{filename}')
-            else:
-                image_path = os.path.join(images_directory, f'{filename}.jpg')
-            with open(image_path, 'wb') as handler:
-                for chunk in response:
-                    handler.write(chunk)
-            print(f"{filename} downloaded, {index + 1} of {len(all_image_urls)} ")
-        else:
-            print(f"Failed to download image {img_url}: HTTP {response.status_code}")
-    except Exception as e:
-        print(f"Could not download image {img_url}: {e}")
 
-# Save video article URLs to text files
-for url in video_article_urls:
-    txt_filename = f"video_url_{tweet_id}.txt"
-    txt_path = os.path.join(images_directory, txt_filename)
-    with open(txt_path, 'a') as file:
-        file.write(url + '\n')
-    print(f"URL {url} saved to {txt_filename}")
+def download():
+    # Create the directory for downloading images
+    images_directory = os.path.join('D:/downloaded_media', tweet_id)
+
+    if not os.path.exists(images_directory):
+        os.makedirs(images_directory)
+
+    # Download each image
+    for index, img_url in enumerate(all_image_urls):
+        try:
+            response = requests.get(img_url, stream=True)
+            if response.status_code == 200:
+                response.raw.decode_content = True
+                filename = extract_filename(img_url)
+                image_path = None
+                if filename.endswith("mp4"):
+                    image_path = os.path.join(images_directory, f'{filename}')
+                else:
+                    image_path = os.path.join(images_directory, f'{filename}.jpg')
+                with open(image_path, 'wb') as handler:
+                    for chunk in response:
+                        handler.write(chunk)
+                print(f"{filename} downloaded, {index + 1} of {len(all_image_urls)} ")
+            else:
+                print(f"Failed to download image {img_url}: HTTP {response.status_code}")
+        except Exception as e:
+            print(f"Could not download image {img_url}: {e}")
+
+    # Save video article URLs to text files
+    for url in video_article_urls:
+        txt_filename = f"video_url_{tweet_id}.txt"
+        txt_path = os.path.join(images_directory, txt_filename)
+        with open(txt_path, 'a') as file:
+            file.write(url + '\n')
+        print(f"URL {url} saved to {txt_filename}")
+
+
+if __name__ == "__main__":
+
+    URLs = [SET_OF_URLs]
+
+    URLsSet = set(URLs)
+    print(len(URLs), len(URLsSet))
+    if len(URLs) != len(URLsSet):
+        URLs = list(URLsSet)
+
+    options = webdriver.ChromeOptions()
+    # options.add_argument('--headless')  # Run in headless mode
+    # options.add_argument('--disable-gpu')  # Disable GPU acceleration
+    # options.add_argument('--no-sandbox')  # Bypass OS security model (required for some systems)
+    # options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
+
+    driver = webdriver.Chrome(options=options)
+
+    # Open a preliminary page
+    driver.get("https://x.com")
+
+    # Add the cookie for authentication
+    cookie = {'name': 'auth_token', 'value': AUTH_TOKEN, 'domain': 'x.com'}
+    driver.add_cookie(cookie)
+
+    for URL in URLs:
+        # Navigate to the desired URL
+        driver.get(URL)
+        tweet_id = URL.split('/')[3]
+        # Wait for the initial set of images to load (if necessary)
+        wait = WebDriverWait(driver, 10)
+        wait.until(EC.presence_of_all_elements_located((By.TAG_NAME, 'img')))
+
+        # Smoothly scroll the page and collect all image URLs
+        all_image_urls, video_article_urls = smooth_scroll_and_collect_images(driver)
+
+        print("the browser has stopped")
+        # Wait for additional images to load
+        time.sleep(3)
+
+        download()
+    # Close the browser
+    driver.quit()
+    print("the browser exit")
