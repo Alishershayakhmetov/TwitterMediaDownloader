@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from seleniumbase import Driver
 
-from functions import smooth_scroll_and_collect_images, extract_filename, isPathExistCheck, download
+from functions import smooth_scroll_and_collect_images_from_author, extract_filename, isPathExistCheck, download, smooth_scroll_and_collect_images
 
 if __name__ == "__main__":
     URLs = os.getenv("SET_OF_URLs").split(",")
@@ -54,8 +54,11 @@ if __name__ == "__main__":
             # wait.until(EC.presence_of_all_elements_located((By.TAG_NAME, 'video')))
 
             # Smoothly scroll the page and collect all image URLs
-            image_urls, gif_urls, video_urls = smooth_scroll_and_collect_images(driver)
-
+            if bool(os.getenv("AUTHOR_MEDIA_ONLY")):
+                image_urls, gif_urls, video_urls = smooth_scroll_and_collect_images_from_author(driver, f"/{tweet_id}")
+            else:
+                image_urls, gif_urls, video_urls = smooth_scroll_and_collect_images(driver)
+            
             print("the browser has stopped")
             # Wait for additional images to load
             time.sleep(3)
